@@ -13,15 +13,15 @@ import {
 import auth from "../../config/firebase";
 import Usuario from "@/model/Usuario";
 
-export default class Autenticacao {
+export default class AutenticacaoEmail {
     static async cadastrar(
         nome: string,
         email: string,
         senha: string,
     ): Promise<void> {
         await createUserWithEmailAndPassword(auth, email, senha);
-        await Autenticacao.mudarNome(nome);
-        await Autenticacao.mandarEmailVerificacao();
+        await AutenticacaoEmail.mudarNome(nome);
+        await AutenticacaoEmail.mandarEmailVerificacao();
     }
 
     static normalizarUsuario(usuario: any): Usuario | null {
@@ -41,7 +41,7 @@ export default class Autenticacao {
 
     static async login(email: string, senha: string): Promise<Usuario | null> {
         const resultado = await signInWithEmailAndPassword(auth, email, senha);
-        return Autenticacao.normalizarUsuario(resultado.user);
+        return AutenticacaoEmail.normalizarUsuario(resultado.user);
     }
 
     static async logout(): Promise<void> {

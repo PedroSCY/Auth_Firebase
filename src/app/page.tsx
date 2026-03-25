@@ -10,7 +10,7 @@ export default function Home() {
     const [email, setEmail] = useState<string>("");
     const [senha, setSenha] = useState<string>("");
     const [telefone, setTelefone] = useState<string>("");
-    const {login, enviarLoginSemSenha} = useAutenticacao()
+    const {login, enviarLoginSemSenha, loginGoogle, loginGitHub, loginAnonimo} = useAutenticacao()
 
     const linkCadastro = () => {
         return (
@@ -36,17 +36,17 @@ export default function Home() {
                 <Button leftIcon={<IconLink />} fullWidth color="violet" variant="outline" onClick={async()=> {await enviarLoginSemSenha(email)}}>
                     Login sem senha
                 </Button>
+                <Button leftIcon={<IconBrandGoogle />} fullWidth color="red" variant="outline" onClick={async()=> await loginGoogle()}>
+                    Login com o Google
+                </Button>
+                <Button leftIcon={<IconBrandGithub />} fullWidth color="dark" variant="outline" onClick={async()=> await loginGitHub()}>
+                    Login com o Github
+                </Button>
                 <Button leftIcon={<IconPhone />} fullWidth color="orange" variant="outline">
                     Login com telefone
                 </Button>
-                <Button leftIcon={<IconUser />} fullWidth color="gray" variant="outline">
+                <Button leftIcon={<IconUser />} fullWidth color="gray" variant="outline" onClick={async() => await loginAnonimo()}>
                     Login Anônimo
-                </Button>
-                <Button leftIcon={<IconBrandGoogle />} fullWidth color="red" variant="outline">
-                    Login com o Google
-                </Button>
-                <Button leftIcon={<IconBrandGithub />} fullWidth color="dark" variant="outline">
-                    Login com o Github
                 </Button>
             </Group>
         </LayoutExterno>

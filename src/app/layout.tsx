@@ -12,7 +12,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="en">
+        <html lang="pt_br">
             <body
                 className={`${inter.className} h-screen flex flex-col justify-center 
             bg-gradient-to-r from-zinc-100 to-zinc-200`}

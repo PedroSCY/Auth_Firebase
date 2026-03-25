@@ -13,6 +13,7 @@ declare global {
     };
 
     type dadosCadastro = { nome: string; email: string; senha: string };
-    type funcaoAtualizacao = (dado:any, senha?:any)=> Usuario;
-    type funcaoLogin = (param?:any)=> Usuario;
+    type funcaoAtualizacao = (dado:any, senha?:any)=> Promise<void>;
+    type funcaoLogin = (param?:any)=> Promise<Usuario>;
+    type funcaoCadastro = (nome: string, email: string, senha: string)=>Promise<void>
 }

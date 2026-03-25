@@ -7,7 +7,7 @@ interface CadastroProps {
     cadastrar?: (param: dadosCadastro) => Promise<void>;
 }
 
-export default function InformacoesCadastro(props: CadastroProps) {
+export default function CamposCadastro(props: CadastroProps) {
     const [email, setEmail] = useState<string>("");
     const [nome, setNome] = useState<string>("");
     const [senha, setSenha] = useState<string>("");

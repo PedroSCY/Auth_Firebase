@@ -14,7 +14,7 @@ export default function LayoutInterno(props: LayoutInternoProps) {
         <ForcarAutenticacao>
             <div className="w-screen m-0 p-0 text-gray-500 flex">
                 <Menu />
-                <div>
+                <div className="flex flex-1 flex-col">
                     <Titulo titulo={props.titulo} subtitulo={props.subtitulo} />
                     {props.children}
                 </div>
