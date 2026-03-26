@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { AutenticacaoProvider } from "@/data/context/ContextoAutenticacao";
 import { NavegacaoProvider } from "@/data/context/ContextoNavegacao";
 import { MensagemProvider } from "@/data/context/ContextoMensagens";
+import Providers from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
@@ -17,14 +18,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className={`${inter.className} h-screen flex flex-col justify-center 
             bg-gradient-to-r from-zinc-100 to-zinc-200`}
             >
-                <NavegacaoProvider>
-                    <MensagemProvider>
-                        <AutenticacaoProvider>
-                            <div id="recaptcha"></div>
-                            {children}
-                        </AutenticacaoProvider>
-                    </MensagemProvider>
-                </NavegacaoProvider>
+                <Providers>
+                    {children}
+                </Providers>
             </body>
         </html>
     );
