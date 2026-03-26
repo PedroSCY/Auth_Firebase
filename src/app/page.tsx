@@ -10,7 +10,7 @@ export default function Home() {
     const [email, setEmail] = useState<string>("");
     const [senha, setSenha] = useState<string>("");
     const [telefone, setTelefone] = useState<string>("");
-    const {login, enviarLoginSemSenha, loginGoogle, loginGitHub, loginAnonimo} = useAutenticacao()
+    const {login, enviarLoginSemSenha, loginGoogle, loginGitHub, loginAnonimo, enviarLoginTelefone} = useAutenticacao()
 
     const linkCadastro = () => {
         return (
@@ -42,7 +42,7 @@ export default function Home() {
                 <Button leftIcon={<IconBrandGithub />} fullWidth color="dark" variant="outline" onClick={async()=> await loginGitHub()}>
                     Login com o Github
                 </Button>
-                <Button leftIcon={<IconPhone />} fullWidth color="orange" variant="outline">
+                <Button leftIcon={<IconPhone />} fullWidth color="orange" variant="outline" onClick={async() => {await enviarLoginTelefone(telefone)}}>
                     Login com telefone
                 </Button>
                 <Button leftIcon={<IconUser />} fullWidth color="gray" variant="outline" onClick={async() => await loginAnonimo()}>

@@ -9,6 +9,8 @@ import auth from "@/config/firebase";
 import useLocalStorage from "../hooks/useLocalStorage";
 import AutenticacaoProvedores from "../auth/AutenticacaoProvedores";
 import AutenticacaoModificacoes from "../auth/AutenticacaoModificacoes";
+import AutenticacaoTelefone from "../auth/AutenticacaoTelefone";
+import useRecaptcha from "../hooks/useRecaptcha";
 
 interface ContextoAutenticacaoProps {
     usuario: Usuario | null;
@@ -31,8 +33,15 @@ interface ContextoAutenticacaoProps {
     loginAnonimo: () => Promise<void>;
     cadastrarUsuarioAnonimo: (param: dadosCadastro) => Promise<void>;
     mudarNome: (nome: string) => Promise<void>;
-    mudarSenha: (novaSenha:string, senhaAtual:string) => Promise<void>;
-    mudarEmail: (email:string, senhaAtual:string) => Promise<void>;
+    mudarSenha: (novaSenha: string, senhaAtual: string) => Promise<void>;
+    mudarEmail: (email: string, senhaAtual: string) => Promise<void>;
+    validarMudarTelefone: (telefone: string) => Promise<void>;
+    enviarMudarTelefone: (codigo: string) => Promise<void>;
+    validarLoginTelefone: (telefone: string) => Promise<void>;
+    enviarLoginTelefone: (codigo: string) => Promise<void>;
+    enviarCadastro2Fator: (senha: string) => Promise<void>;
+    validarCadastro2Fator: (codigo: string) => Promise<void>;
+    validarCodigo2FA: (codigo: string) => Promise<void>;
 }
 
 const ContextoAutenticacao = createContext<ContextoAutenticacaoProps>(
@@ -46,51 +55,78 @@ export function AutenticacaoProvider(props: any) {
         irLogin,
         estaEmPaginaParaUsuarioNaoLogado,
         paginaAtual,
+        irConfirmarLoginSMS,
+        irConfirmarLoginMFA,
     } = useNavegacao();
-    const { adicionarLocalStorage, pegarLocalStorage, tirarLocalStorage } =
-        useLocalStorage();
+    const { adicionarLocalStorage, pegarLocalStorage, tirarLocalStorage } = useLocalStorage();
     const [usuario, setUsuario] = useState<Usuario | null>(null);
     const [carregando, setCarregando] = useState<boolean>(false);
+    const recaptcha = useRecaptcha();
     const CHAVE_LOGIN_LINK = "vaiFazerLogin";
+    const CHAVE_MUDAR_TELEFONE = "idVerificacao";
+    const CHAVE_2FATOR = "segundoFator";
 
-
-    function criarMetodoCadastro(operacoes: funcaoCadastro, navegar?: ()=> void){
-        return async function(param:dadosCadastro) {
+    function criarMetodoCadastro(
+        operacoes: funcaoCadastro,
+        navegar?: () => void,
+    ) {
+        return async function (param: dadosCadastro) {
             const { nome, email, senha } = param;
-        try {
-            await operacoes(nome, email, senha)
-            mensagemSucesso("Usuario cadastrado");
-            navegar?.()
-        } catch (e: any) {
-            mensagemErro(e.message);
-        }
-        }
-    }
-
-    const cadastrar = criarMetodoCadastro( AutenticacaoEmail.cadastrar, irHomeAplicacao)
-    const cadastrarUsuarioAnonimo = criarMetodoCadastro(AutenticacaoProvedores.cadastrarUsuarioAnonimo)
-
-
-    function criarMetodoAtualizacao(operacoes: funcaoAtualizacao, mensagem: string, atualizarUsuario:boolean = false) {
-        return async function(dado:any, senha?:string) {
-        try {
-            await operacoes(dado,senha)
-            mensagemSucesso(mensagem)
-            if(atualizarUsuario){
-                const usuario = AutenticacaoEmail.normalizarUsuario(auth.currentUser)
-                setUsuario(usuario)
+            try {
+                await operacoes(nome, email, senha);
+                mensagemSucesso("Usuario cadastrado");
+                navegar?.();
+            } catch (e: any) {
+                mensagemErro(e.message);
             }
-        } catch (e:any) {
-            mensagemErro(e.message)
-        }
-    }
+        };
     }
 
-    const mudarNome = criarMetodoAtualizacao(AutenticacaoModificacoes.alterarNome,"Nome alterado com sucesso!", true)
+    const cadastrar = criarMetodoCadastro(
+        AutenticacaoEmail.cadastrar,
+        irHomeAplicacao,
+    );
+    const cadastrarUsuarioAnonimo = criarMetodoCadastro(
+        AutenticacaoProvedores.cadastrarUsuarioAnonimo,
+    );
 
-    const mudarSenha = criarMetodoAtualizacao(AutenticacaoModificacoes.alterarSenha,"Senha alterada com sucesso!")
+    function criarMetodoAtualizacao(
+        operacoes: funcaoAtualizacao,
+        mensagem: string,
+        atualizarUsuario: boolean = false,
+    ) {
+        return async function (dado: any, senha?: string) {
+            try {
+                await operacoes(dado, senha);
+                mensagemSucesso(mensagem);
+                if (atualizarUsuario) {
+                    const usuario = AutenticacaoEmail.normalizarUsuario(
+                        auth.currentUser,
+                    );
+                    setUsuario(usuario);
+                }
+            } catch (e: any) {
+                mensagemErro(e.message);
+            }
+        };
+    }
 
-    const mudarEmail = criarMetodoAtualizacao(AutenticacaoModificacoes.alterarEmail,"Confirme alteração no novo endereço de Email!", true)
+    const mudarNome = criarMetodoAtualizacao(
+        AutenticacaoModificacoes.alterarNome,
+        "Nome alterado com sucesso!",
+        true,
+    );
+
+    const mudarSenha = criarMetodoAtualizacao(
+        AutenticacaoModificacoes.alterarSenha,
+        "Senha alterada com sucesso!",
+    );
+
+    const mudarEmail = criarMetodoAtualizacao(
+        AutenticacaoModificacoes.alterarEmail,
+        "Confirme alteração no novo endereço de Email!",
+        true,
+    );
 
     function desligarCarregamento() {
         setTimeout(() => setCarregando(false), 1500);
@@ -103,6 +139,9 @@ export function AutenticacaoProvider(props: any) {
                 await operacoes(param);
                 irHomeAplicacao();
             } catch (e: any) {
+                if(e.code === "auth/multi-factor-auth-required") {
+                    await enviarCodigo2FA(e)
+                }
                 mensagemErro(e.message);
             } finally {
                 desligarCarregamento();
@@ -110,14 +149,26 @@ export function AutenticacaoProvider(props: any) {
         };
     }
 
-    const login = criarMetodoLoginImediato(async function ({ email, senha }: { email: string; senha: string }) {
+    const login = criarMetodoLoginImediato(async function ({
+        email,
+        senha,
+    }: {
+        email: string;
+        senha: string;
+    }) {
         const u = await AutenticacaoEmail.login(email, senha);
         setUsuario(u);
     });
 
-    const loginGoogle = criarMetodoLoginImediato(AutenticacaoProvedores.loginGoogle)
-    const loginGitHub = criarMetodoLoginImediato(AutenticacaoProvedores.loginGitHub)
-    const loginAnonimo = criarMetodoLoginImediato(AutenticacaoProvedores.loginAnonimo)
+    const loginGoogle = criarMetodoLoginImediato(
+        AutenticacaoProvedores.loginGoogle,
+    );
+    const loginGitHub = criarMetodoLoginImediato(
+        AutenticacaoProvedores.loginGitHub,
+    );
+    const loginAnonimo = criarMetodoLoginImediato(
+        AutenticacaoProvedores.loginAnonimo,
+    );
 
     async function logout() {
         try {
@@ -146,113 +197,119 @@ export function AutenticacaoProvider(props: any) {
         }
     }
 
-    async function enviarLoginSemSenha(email: string) {
-        try {
+    function criarEnvioEValidacao(
+        operacoesEnvio: (param: any) => Promise<string>,
+        operacoesValidacao: (dadosLocal: string, param?: any) => Promise<void>,
+        mensagem: string,
+        chave: string,
+        redirecionar?: () => void,
+    ) {
+        const envio = async function (param: any) {
+            try {
+                const dados = await operacoesEnvio(param);
+                mensagemSucesso(mensagem);
+                adicionarLocalStorage(chave, dados);
+            } catch (e: any) {
+                mensagemErro(e.message);
+            }
+        };
+
+        const validacao = async function (param?: any) {
+            try {
+                const dado = pegarLocalStorage(chave);
+                if (dado) {
+                    await operacoesValidacao(dado, param);
+                }
+                redirecionar?.();
+            } catch (e: any) {
+                mensagemErro(e.message);
+            } finally {
+                tirarLocalStorage(chave);
+            }
+        };
+
+        return [envio, validacao];
+    }
+
+    const [enviarMudarTelefone, validarMudarTelefone] = criarEnvioEValidacao(
+        async (telefone: string) => {
+            return await AutenticacaoTelefone.enviarMudarTelefone(
+                { phoneNumber: telefone },
+                recaptcha,
+            );
+        },
+        AutenticacaoTelefone.validarMudarTelefone,
+        "Verifique o seu telefone!",
+        CHAVE_MUDAR_TELEFONE,
+    );
+
+    const [enviarLoginSemSenha, validarLoginSemSenha] = criarEnvioEValidacao(
+        async (email: string) => {
             await AutenticacaoEmail.enviarLoginSemSenha(email);
-            mensagemSucesso("Verifique seu email");
-            adicionarLocalStorage(CHAVE_LOGIN_LINK, email);
+            return email;
+        },
+        async (email: string) => {
+            await AutenticacaoEmail.validarLoginSemSenha(email, paginaAtual);
+        },
+        "Verifique seu email",
+        CHAVE_LOGIN_LINK,
+        irHomeAplicacao,
+    );
+
+    async function enviarLoginTelefone(telefone: string) {
+        try {
+            window.confirmationResult =
+                await AutenticacaoTelefone.enviarLoginTelefone(
+                    telefone,
+                    recaptcha,
+                );
+            mensagemSucesso("Verifique seu telefone");
+            irConfirmarLoginSMS();
         } catch (e: any) {
             mensagemErro(e.message);
         }
     }
 
-    async function validarLoginSemSenha() {
+    async function validarLoginTelefone(codigo: string) {
         try {
-            const email = pegarLocalStorage(CHAVE_LOGIN_LINK);
-            if (email) {
-                await AutenticacaoEmail.validarLoginSemSenha(
-                    email,
-                    paginaAtual,
+            if (window.confirmationResult) {
+                await AutenticacaoTelefone.validarLoginTelefone(
+                    window.confirmationResult,
+                    codigo,
                 );
+                irHomeAplicacao();
             }
-            irHomeAplicacao();
         } catch (e: any) {
             mensagemErro(e.message);
         } finally {
-            tirarLocalStorage(CHAVE_LOGIN_LINK);
+            window.confirmationResult = undefined;
         }
     }
 
-        // async function mudarNome(nome:string) {
-    //     try {
-    //         await AutenticacaoModificacoes.alterarNome(nome)
-    //         mensagemSucesso("Nome alterado com sucesso!")
-    //         const usuario = AutenticacaoEmail.normalizarUsuario(auth.currentUser)
-    //         setUsuario(usuario)
-    //     } catch (e:any) {
-    //         mensagemErro(e.message)
-    //     }
-    // }
+     const [enviarCadastro2Fator, validarCadastro2Fator] = criarEnvioEValidacao(
+        async (senha: string) => {
+            return await AutenticacaoTelefone.enviarCadastro2Fator(senha, recaptcha)
+        },
+        AutenticacaoTelefone.validarCadastro2Fator,
+        "Verifique o seu telefone!",
+        CHAVE_2FATOR,
+    );
 
-    // async function mudarSenha(novaSenha:string, senhaAtual:string) {
-    //     try {
-    //         await AutenticacaoModificacoes.alterarSenha(novaSenha,senhaAtual)
-    //         mensagemSucesso("Senha alterada com sucesso!")
-    //         const usuario = AutenticacaoEmail.normalizarUsuario(auth.currentUser)
-    //         setUsuario(usuario)
-    //     } catch (e:any) {
-    //         mensagemErro(e.message)
-    //     }
-    // }
-
-    // async function cadastrar(param: dadosCadastro) {
-    //     const { nome, email, senha } = param;
-    //     try {
-    //         await AutenticacaoEmail.cadastrar(nome, email, senha);
-    //         mensagemSucesso("Usuario cadastrado");
-    //         irHomeAplicacao();
-    //     } catch (e: any) {
-    //         mensagemErro(e.message);
-    //     }
-    // }
-
-    // async function cadastrarUsuarioAnonimo(param: dadosCadastro) {
-    //     const { nome, email, senha } = param;
-    //     try {
-    //         await AutenticacaoProvedores.cadastrarUsuarioAnonimo(nome, email, senha);
-    //         mensagemSucesso("Usuario cadastrado");
-    //         irHomeAplicacao();
-    //     } catch (e: any) {
-    //         mensagemErro(e.message);
-    //     }
-    // }
-
-    // async function login({ email, senha }: { email: string; senha: string }) {
-    //     try {
-    //         setCarregando(true);
-    //         const u = await AutenticacaoEmail.login(email, senha);
-    //         setUsuario(u);
-    //         irHomeAplicacao();
-    //     } catch (e: any) {
-    //         mensagemErro(e.message);
-    //     } finally {
-    //         desligarCarregamento();
-    //     }
-    // }
-
-    // async function loginGoogle() {
-    //     try {
-    //         setCarregando(true);
-    //         await AutenticacaoProvedores.loginGoogle();
-    //         irHomeAplicacao();
-    //     } catch (e: any) {
-    //         mensagemErro(e.message);
-    //     } finally {
-    //         desligarCarregamento();
-    //     }
-    // }
-
-    // async function loginGitHub() {
-    //     try {
-    //         setCarregando(true);
-    //         await AutenticacaoProvedores.loginGitHub();
-    //         irHomeAplicacao();
-    //     } catch (e: any) {
-    //         mensagemErro(e.message);
-    //     } finally {
-    //         desligarCarregamento();
-    //     }
-    // }
+    const [enviarCodigo2FA, validarCodigo2FA] = criarEnvioEValidacao(
+        async(e:any)=>{
+            const [idVerificacao, resolver] = await AutenticacaoTelefone.enviarCodigo2FA(e,recaptcha)
+            window.resolver = resolver
+            irConfirmarLoginMFA()
+            return idVerificacao
+        },
+        async (idVerificacao:string, codigo:string)=>{
+            await AutenticacaoTelefone.validarCodigo2FA(idVerificacao,codigo, window.resolver)
+            window.resolver = undefined;
+            irHomeAplicacao()
+        },
+        "Verifique seu telefone",
+        "login2FA",
+    )
 
     useEffect(() => {
         if (temUsuarioLogado() && estaEmPaginaParaUsuarioNaoLogado()) {
@@ -286,6 +343,13 @@ export function AutenticacaoProvider(props: any) {
                 mudarNome,
                 mudarSenha,
                 mudarEmail,
+                enviarMudarTelefone,
+                validarMudarTelefone,
+                enviarLoginTelefone,
+                validarLoginTelefone,
+                enviarCadastro2Fator,
+                validarCadastro2Fator,
+                validarCodigo2FA,
             }}
         >
             {props.children}

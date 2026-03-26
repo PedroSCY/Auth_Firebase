@@ -10,6 +10,8 @@ interface ContextoNavegacaoProps {
     paginaAtual: () => string;
     recarregarPagina: () => void;
     estaEmPaginaParaUsuarioNaoLogado: () => boolean;
+    irConfirmarLoginSMS: () => void
+    irConfirmarLoginMFA: () => void
 }
 
 const ContextoNavegacao = createContext<ContextoNavegacaoProps>({} as any);
@@ -27,6 +29,14 @@ export function NavegacaoProvider(props: any) {
 
     function irHomeAplicacao() {
         router.push(homeAplicacao);
+    }
+
+    function irConfirmarLoginSMS(){
+        router.push("/confirmarLogin/sms")
+    }
+
+     function irConfirmarLoginMFA(){
+        router.push("/confirmarLogin/mfa")
     }
 
     function estaEmLogin() {
@@ -68,6 +78,8 @@ export function NavegacaoProvider(props: any) {
                 paginaAtual,
                 recarregarPagina,
                 estaEmPaginaParaUsuarioNaoLogado,
+                irConfirmarLoginSMS,
+                irConfirmarLoginMFA,
             }}
         >
             {props.children}

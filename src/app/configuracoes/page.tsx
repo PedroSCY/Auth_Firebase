@@ -4,10 +4,21 @@ import Layout from "../../components/template/LayoutInterno";
 import CamposCadastro from "@/components/template/CamposCadastro";
 import CampoComBotao from "@/components/template/CampoComBotao";
 import CampoComSenhaBotao from "@/components/template/CampoComSenhaBotao";
+import TelefoneComCodigo from "@/components/template/TelefoneComCodigo";
+import SenhaComCodigo from "@/components/template/SenhaComCodigo";
 
 export default function Configuracoes() {
-    const { usuario, cadastrarUsuarioAnonimo, mudarNome, mudarSenha, mudarEmail} =
-        useAutenticacao();
+    const {
+        usuario,
+        cadastrarUsuarioAnonimo,
+        mudarNome,
+        mudarSenha,
+        mudarEmail,
+        enviarMudarTelefone,
+        validarMudarTelefone,
+        enviarCadastro2Fator,
+        validarCadastro2Fator
+    } = useAutenticacao();
     const MudarNome = () => {
         return (
             <CampoComBotao
@@ -30,7 +41,7 @@ export default function Configuracoes() {
         );
     };
 
-     const MudarEmail = () => {
+    const MudarEmail = () => {
         return (
             <CampoComSenhaBotao
                 nomeInput="Novo Email"
@@ -41,15 +52,37 @@ export default function Configuracoes() {
         );
     };
 
+    const MudarTelefone = () => {
+        return (
+            <TelefoneComCodigo
+                enviarCodigo={enviarMudarTelefone}
+                validarCodigo={validarMudarTelefone}
+                textoValidar="Validar"
+                enunciado="Mudar Telefone"
+            />
+        );
+    };
+
+    const Adicionar2FA = () => {
+        return (
+            <SenhaComCodigo
+                enviarCodigo={enviarCadastro2Fator}
+                validarCodigo={validarCadastro2Fator}
+                textoValidar="Adicionar"
+                enunciado="Adicionar 2FA"
+            />
+        );
+    };
+
     const conteudo = usuario?.ehAnonimo ? (
         <CamposCadastro cadastrar={cadastrarUsuarioAnonimo} />
     ) : (
         <div className="flex flex-1 gap-8 flex-wrap p-4">
             <MudarNome />
-            <div className="w-px h-1/2 bg-zinc-300 self-center"></div>
             <MudarSenha />
-            <div className="w-px h-1/2 bg-zinc-300 self-center"></div>
             <MudarEmail />
+            <MudarTelefone />
+            <Adicionar2FA/>
         </div>
     );
 

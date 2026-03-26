@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { auth } from "../../config/firebase";
+import auth from "../../config/firebase";
 import { RecaptchaVerifier } from "firebase/auth";
 
 export default function useRecaptcha() {
