@@ -1,4 +1,4 @@
-### Você pode acessar o projeto em produção clicando aqui: [auth_firebase](auth-firebase-delta.vercel.app)
+### Você pode acessar o projeto em produção clicando aqui: [auth_firebase](https://auth-firebase-delta.vercel.app)
 
 # Firebase Authentication: Aprendizado e Prática
 
